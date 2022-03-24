@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error['kana'] = '10文字以内でご入力ください。';
     }
     // 電話番号
-    if($_POST['tel'] && !preg_match("/\A[0-9０-９]+\z/", $_POST["tel"])){
+    if($_POST['tel'] && !preg_match("/\A[0-9０-９]+\z/", $_POST['tel'])){
         $error['tel'] = "電話番号は0-9の数字のでご入力ください";
     }
     // メールアドレス
@@ -41,4 +41,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: confirm.php');
         exit();
     }
+    
 }
