@@ -1,18 +1,43 @@
 <?php
 require_once(ROOT_PATH .'./Controllers/contactController.php');
-$contacts = new ContactController();
-$result = $contacts->index();
+$index = new contactController();
+$data =  $index->index();
 
-// //POSTされたデータを変数に格納
-// //入力データの初期化
-$name = isset($_POST['name']) ? $_POST['name'] : null;
-$kana = isset($_POST['kana']) ? $_POST['kana'] : null;
-$tel = isset($_POST['tel']) ? $_POST['tel'] : null;
-$email = isset($_POST['email']) ? $_POST['email'] : null;
-$body = isset($_POST['body']) ? $_POST['body'] : null;
+if (empty($_SERVER["HTTP_REFERER"])) {
+    $host = $_SERVER['HTTP_HOST'];
+    $uri = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+    header("Location: //$host$uri/contact.php");
+}
+
+$dsn = 'mysql:host=localhost;dbname=casteria;charset=utf8';
+$user = 'root';
+$pass = 'root';
+
+try {
+    $pdo = new PDO($dsn, $user, $pass, [
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+} catch (PDOException $e) {
+    echo '接続失敗'.$e->getMessage();
+    exit();
+};
+
+$id = $_GET['id'];
+
+try {
+    $pdo -> beginTransaction();
+    $stmt = $pdo->prepare('SELECT * FROM contacts WHERE id = :id');
+    $stmt->bindParam(':id', $id, PDO::PARAM_STR);
+    $stmt->execute();
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $pdo -> commit();
+} catch (PDOException $e) {
+    $pdo -> rollBack();
+    echo '更新失敗'.$e->getMessage();
+    exit();
+};
 
 ?>
-
 
 <!DOCTYPE html>
 <html>
@@ -36,7 +61,7 @@ $body = isset($_POST['body']) ? $_POST['body'] : null;
     <?php
         $errormsg = array('', '', '', '', '', '', '', '');
         $tel_much = "/^(0{1}\d{9,10})$/";
-      
+
     if (!empty($_POST)) {
         if (empty($_POST['name'])) {
             $errormsg[0] = '氏名は必須入力です。';
@@ -48,7 +73,7 @@ $body = isset($_POST['body']) ? $_POST['body'] : null;
         } elseif (mb_strlen($_POST['kana']) > 10) {
             $errormsg[3] = '10文字以内で入力してください。';
         }
-        if (!empty($_POST['tel']) && !preg_match("/\A[0-9０-９]+\z/", $_POST['tel'])) {
+        if (!preg_match($tel_much, $_POST['tel'])) {
             $errormsg[4] = '電話番号は0-9の数字のみで入力してください。';
         }
         if (empty($_POST['email'])) {
@@ -61,115 +86,75 @@ $body = isset($_POST['body']) ? $_POST['body'] : null;
         }
         if ($errormsg[0] === '' && $errormsg[1] === '' && $errormsg[2] === '' && $errormsg[3] === '' &&
         $errormsg[4] === '' && $errormsg[5] === '' && $errormsg[6] === '' && $errormsg[7] === '') {
+            if (!empty($_GET["id"])) {
+                $_SESSION["id"] = $_GET["id"];
+            }
             $_SESSION["name"] = $_POST["name"];
             $_SESSION["kana"] = $_POST["kana"];
             $_SESSION["tel"] = $_POST["tel"];
             $_SESSION["email"] = $_POST["email"];
             $_SESSION["body"] = $_POST["body"];
-            header('Location:confirm.php');
+            header('Location:edit_confirm.php');
             exit();
         }
     }
+
+    foreach ($result as $val) {
+    }
     ?>
     <div class="wrapper">
-        <h1>お問い合わせ画面</h1>
-        <form id="form" action="contact.php" method="POST">
+        <h1>編集画面</h1>
+        <form id="form" action="edit_confirm.php" method="POST">
             <dl class="form-content">
+                <dd><input type="hidden" name ="id" value ="<?php echo $_GET['id']; ?>"></dd>
                 <dt>名前</dt>
-                <dd><input type="text" id="name" name="name" value="<?php echo $name; ?>"></dd>
+                <dd><input type="text" id="name" name="name" 
+                value="<?php echo htmlspecialchars($val["name"], ENT_QUOTES, "UTF-8"); ?>"></dd>
                 <dd class="error-php">
                     <?php
                     if (!empty($errormsg[0])) {
                         echo htmlspecialchars($errormsg[0], ENT_QUOTES, "UTF-8");
                     } elseif (!empty($errormsg[1])) {
-                        echo htmlspecialchars($errormsg[1], ENT_QUOTES, "UTF-8");
+                            echo htmlspecialchars($errormsg[1], ENT_QUOTES, "UTF-8");
                     }
                     ?>
                 </dd>
                 <dt>フリガナ</dt>
-                <dd><input type="text" id="kana" name="kana" value="<?php echo $kana; ?>"></dd>
+                <dd><input type="text" id="kana" name="kana" 
+                value="<?php echo htmlspecialchars($val["kana"], ENT_QUOTES, "UTF-8"); ?>"></dd>
                 <dd class="error-php">
                     <?php
                     if (!empty($errormsg[2])) {
                         echo htmlspecialchars($errormsg[2], ENT_QUOTES, "UTF-8");
                     } elseif (!empty($errormsg[3])) {
-                        echo htmlspecialchars($errormsg[3], ENT_QUOTES, "UTF-8");
+                            echo htmlspecialchars($errormsg[3], ENT_QUOTES, "UTF-8");
                     }
                     ?>
                 </dd>
                 <dt>電話番号</dt>
-                <dd><input type="tel" id="tel" name="tel" value="<?php echo $tel; ?>"></dd>
-                <dd class="error-php">
-                    <?php
-                    if (!empty($errormsg[4])) {
-                        echo htmlspecialchars($errormsg[4], ENT_QUOTES, "UTF-8");
-                    }
-                    ?>
-                    </dd>
+                <dd><input type="tel" id="tel" name="tel" 
+                value="<?php echo htmlspecialchars($val["tel"], ENT_QUOTES, "UTF-8"); ?>"></dd>
+                <dd class="error-php"><?php echo htmlspecialchars($errormsg[4], ENT_QUOTES, "UTF-8"); ?></dd>
                 <dt>メールアドレス</dt>
-                <dd><input type="text" id="email" name="email" value="<?php echo $email; ?>"></dd>
+                <dd><input type="text" id="email" name="email" 
+                value="<?php echo htmlspecialchars($val["email"], ENT_QUOTES, "UTF-8"); ?>"></dd>
                 <dd class="error-php">
                     <?php
                     if (!empty($errormsg[5])) {
                         echo htmlspecialchars($errormsg[5], ENT_QUOTES, "UTF-8");
                     } elseif (!empty($errormsg[6])) {
-                        echo htmlspecialchars($errormsg[6], ENT_QUOTES, "UTF-8");
+                            echo htmlspecialchars($errormsg[6], ENT_QUOTES, "UTF-8");
                     }
                     ?>
                 </dd>
                 <dt>お問い合わせ内容</dt>
-                <dd><textarea id="body" name="body" rows="10" value="<?php echo $body; ?>"></textarea></dd>
+                <dd><textarea id="body" name="body" rows="10"
+                ><?php echo htmlspecialchars($val["body"], ENT_QUOTES, "UTF-8"); ?></textarea></dd>
                 <dd class="error-php"><?php echo htmlspecialchars($errormsg[7], ENT_QUOTES, "UTF-8"); ?></dd>
                 <button type="submit">送信</button>
             </dl>
         </form>
     </div>
-
-    <div class="reference">
-        <table>
-            <tr class="table-title">
-                <th>id</th>
-                <th>名前</th>
-                <th>カナ</th>
-                <th>電話番号</th>
-                <th>メールアドレス</th>
-                <th>お問い合わせ内容<br></th>
-                <th></th>
-                <th></th>
-            </tr>
-            <?php foreach ($result as $val) : ?>
-            <tr>
-                <td><?php echo htmlspecialchars($val['id'], ENT_QUOTES, "UTF-8") ?></td>
-                <td><?php echo htmlspecialchars($val['name'], ENT_QUOTES, "UTF-8") ?></td>
-                <td><?php echo htmlspecialchars($val['kana'], ENT_QUOTES, "UTF-8") ?></td>
-                <td><?php echo htmlspecialchars($val['tel'], ENT_QUOTES, "UTF-8") ?></td>
-                <td><?php echo htmlspecialchars($val['email'], ENT_QUOTES, "UTF-8") ?></td>
-                <td class="new-line"><?php echo htmlspecialchars($val['body'], ENT_QUOTES, "UTF-8") ?></td>
-                <td><a href="edit.php?id=<?php echo $val['id'] ?>">編集</a></td>
-                <td><a class="delete" href="delete.php?id=<?php echo $val['id']?>">削除</a>
-                </td>
-                <form action="edit.php" method="GET">
-                <input type="hidden" name="id" value="<?php echo $val['id']; ?>">
-                </form>
-                <form action="contact.php" method="GET">
-                <input type="hidden" name="id" value="<?php echo $val['id']; ?>">
-                </form>
-                <script>
-                $(function() {
-                    $('.delete').off('click');
-                    $('.delete').one('click', function (){
-                    if(!confirm('データを削除しますか？')){
-                        return false;
-                    } else {
-                        exit();
-                    }
-                    });
-                });
-                </script>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-    </div>
     <?php require("footer.php")?>
 </body>
-</html>
+</html> 

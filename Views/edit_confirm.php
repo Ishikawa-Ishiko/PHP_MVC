@@ -1,13 +1,14 @@
 <?php
 require_once(ROOT_PATH .'./Controllers/contactController.php');
-$index = new contactController();
-$data =  $index->create();
+$index = new ContactController();
+$data =  $index->update();
 
 if (empty($_SERVER["HTTP_REFERER"])) {
     $host = $_SERVER['HTTP_HOST'];
     $uri = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
     header("Location: //$host$uri/contact.php");
 }
+
 
 ?>
 <!DOCTYPE html>
@@ -29,8 +30,8 @@ if (empty($_SERVER["HTTP_REFERER"])) {
 <body>
 <?php require("header.php"); ?>
 <div class="wrapper">
-    <h1>確認画面</h1>
-    <form action="complete.php" method="POST">
+    <h1>更新確認画面</h1>
+    <form action="contact.php" method="POST">
         <dl class="form-content">
             <dt class="confirm-dt">名前</dt>
             <dd><?php echo htmlspecialchars($_SESSION['name'], ENT_QUOTES, "UTF-8"); ?></dd>
@@ -45,11 +46,11 @@ if (empty($_SERVER["HTTP_REFERER"])) {
             <dd>上記内容でよろしいですか？</dd>
             <div class="button">
                 <dd><button type="button" onclick = "history.back()">キャンセル</button>
-                <dd><button type="submit">送信</button>
+                <dd><button type="submit" id="edit">送信</button>
             </div>
         </dl>
     </form>
 </div>
     <?php require("footer.php"); ?>
 </body>
-</html>
+</html> 
